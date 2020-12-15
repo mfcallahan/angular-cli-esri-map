@@ -21,7 +21,7 @@ import {
   EventEmitter,
   OnDestroy
 } from "@angular/core";
-import { loadModules } from "esri-loader";
+import { EsriLoaderService } from "../esri-loader.service";
 import esri = __esri; // Esri TypeScript Types
 
 @Component({
@@ -78,12 +78,12 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     return this._basemap;
   }
 
-  constructor() {}
+  constructor(readonly esriLoaderService: EsriLoaderService) {}
 
   async initializeMap() {
     try {
       // Load the modules for the ArcGIS API for JavaScript
-      const [EsriMap, EsriMapView] = await loadModules([
+      const [EsriMap, EsriMapView] = await this.esriLoaderService.loadModules([
         "esri/Map",
         "esri/views/MapView"
       ]);
@@ -105,20 +105,24 @@ export class EsriMapComponent implements OnInit, OnDestroy {
 
       this._view = new EsriMapView(mapViewProperties);
       await this._view.when();
-      return this._view;
+      return true;
     } catch (error) {
       console.log("EsriLoader: ", error);
+      return false;
     }
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     // Initialize MapView and return an instance of MapView
-    this.initializeMap().then(mapView => {
+    const mapLoaded = await this.initializeMap();
+
+    this.mapLoadedEvent.emit(mapLoaded);
+
+    if (mapLoaded) {
       // The map has been initialized
       console.log("mapView ready: ", this._view.ready);
       this._loaded = this._view.ready;
-      this.mapLoadedEvent.emit(true);
-    });
+    }
   }
 
   ngOnDestroy() {
